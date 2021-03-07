@@ -2,18 +2,14 @@
 const path = require('path')
 const { scheduler } = require('../utils/scheduler')
 
-exports.command = 'wps'
+exports.command = '10086'
 
-exports.describe = 'wps签到任务'
+exports.describe = '10086签到任务'
 
 exports.builder = function (yargs) {
     return yargs
-        .option('wps_sid', {
-            describe: 'cookie项wps_sid的值',
-            type: 'string'
-        })
-        .option('csrf', {
-            describe: 'cookie项csrf的值',
+        .option('cookies', {
+            describe: 'cookies',
             type: 'string'
         })
         .help()
@@ -27,10 +23,10 @@ exports.handler = async function (argv) {
     if ('accountSn' in argv && argv.accountSn) {
         let accountSns = argv.accountSn.split(',')
         for (let sn of accountSns) {
-            if (('wps_sid-' + sn) in argv) {
+            if (('user-' + sn) in argv) {
                 let account = {
-                    wps_sid: argv['wps_sid-' + sn],
-                    csrf: argv['csrf-' + sn],
+                    cookies: argv['cookies-' + sn],
+                    user: argv['user-' + sn] + '',
                     tasks: argv['tasks-' + sn]
                 }
                 if (('tryrun-' + sn) in argv) {
@@ -47,19 +43,16 @@ exports.handler = async function (argv) {
     console.log('总账户数', accounts.length)
     for (let account of accounts) {
         await require(path.join(__dirname, 'tasks', command, command)).start({
-            cookies: {
-                wps_sid: account.wps_sid,
-                csrf: account.csrf,
-            },
+            cookies: account.cookies,
             options: {}
-        }).catch(err => console.log("wps签到任务:", err.message))
+        }).catch(err => console.log("10086签到任务:", err.message))
         let hasTasks = await scheduler.hasWillTask(command, {
             tryrun: 'tryrun' in argv,
-            taskKey: account.wps_sid
+            taskKey: account.user
         })
         if (hasTasks) {
-            scheduler.execTask(command, account.tasks).catch(err => console.log("wps签到任务:", err.message)).finally(() => {
-                console.log('当前任务执行完毕！')
+            scheduler.execTask(command, account.tasks).catch(err => console.log("10086签到任务:", err.message)).finally(() => {
+                console.log('全部任务执行完毕！')
             })
         } else {
             console.log('暂无可执行任务！')
