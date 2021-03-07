@@ -11,12 +11,7 @@ const UNICOM_APPID = "UNICOM_APPID";
 String.prototype.replaceWithMask = function (start, end) {
   return this.substr(0, start) + "******" + this.substr(-end, end);
 };
-let env = require("dotenv").config({
-  path: path.resolve(__dirname, "../config", ".env"),
-}).parsed;
-if (!env) {
-  throw new Error("missing env file,please check it as well");
-}
+
 exports.builder = function (yargs) {
   return yargs
     .option("leftTasks", {
