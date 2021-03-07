@@ -5,6 +5,7 @@ const { scheduler } = require("../utils/scheduler");
 exports.command = "unicom";
 
 exports.describe = "unicom任务";
+
 const UNICOM_USERNAME = "UNICOM_USERNAME";
 const UNICOM_PASSWORD = "UNICOM_PASSWORD";
 const UNICOM_APPID = "UNICOM_APPID";
@@ -47,14 +48,34 @@ let getAccount = (data, cb = null) => {
   return typeof cb === "function" ? cb(account) : account;
 };
 exports.handler = async function (argv) {
-  var command = argv._[0];
-  var accounts = [];
-  accounts = getAccount(env, (data) => {
-    data.map((i) => {
-      if ("tasks" in argv) i.tasks = argv["tasks"];
-    });
-    return data;
-  });
+  var command = argv._[0]
+  var accounts = []
+  if ('accountSn' in argv && argv.accountSn) {
+    let accountSns = (argv.accountSn + '').split(',')
+    for (let sn of accountSns) {
+      if (('user-' + sn) in argv) {
+        let account = {
+          cookies: argv['cookies-' + sn],
+          user: argv['user-' + sn] + '',
+          password: argv['password-' + sn] + '',
+          appid: argv['appid-' + sn],
+          tasks: argv['tasks-' + sn] || argv['tasks']
+        }
+        if (('tryrun-' + sn) in argv) {
+          account['tryrun'] = true
+        }
+        accounts.push(account)
+      }
+    }
+  } else {
+    accounts.push({
+      cookies: argv['cookies'],
+      user: argv['user'] + '',
+      password: argv['password'] + '',
+      appid: argv['appid'],
+      tasks: argv['tasks']
+    })
+  }
   console.log("总账户数", accounts.length);
   for (let account of accounts) {
     if ("leftTasks" in argv) {
