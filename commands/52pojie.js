@@ -1,6 +1,6 @@
 
 const path = require('path')
-const { scheduler } = require('../utils/scheduler')
+const { buildArgs } = require('../utils/util')
 
 exports.command = '52pojie'
 
@@ -23,46 +23,27 @@ exports.builder = function (yargs) {
 
 exports.handler = async function (argv) {
   var command = argv._[0]
-  var accounts = []
-  if ('accountSn' in argv && argv.accountSn) {
-    let accountSns = argv.accountSn.split(',')
-    for (let sn of accountSns) {
-      if (('htVD_2132_auth-' + sn) in argv) {
-        let account = {
-          htVD_2132_auth: argv['htVD_2132_auth-' + sn],
-          htVD_2132_saltkey: argv['htVD_2132_saltkey-' + sn],
-          tasks: argv['tasks-' + sn]
-        }
-        if (('tryrun-' + sn) in argv) {
-          account['tryrun'] = true
-        }
-        accounts.push(account)
-      }
-    }
-  } else {
-    accounts.push({
-      ...argv
-    })
-  }
-  console.log('总账户数', accounts.length)
+  let accounts = buildArgs(argv)
+  console.info('总账户数', accounts.length)
   for (let account of accounts) {
+    let { scheduler } = require('../utils/scheduler')
     await require(path.join(__dirname, 'tasks', command, command)).start({
       cookies: {
         htVD_2132_auth: account.htVD_2132_auth,
         htVD_2132_saltkey: account.htVD_2132_saltkey
       },
-      options: {}
-    }).catch(err => console.log("52pojie签到任务:", err.message))
+      options: account
+    }).catch(err => console.error("52pojie签到任务:", err.message))
     let hasTasks = await scheduler.hasWillTask(command, {
       tryrun: 'tryrun' in argv,
       taskKey: account.htVD_2132_auth
     })
     if (hasTasks) {
-      scheduler.execTask(command, account.tasks).catch(err => console.log("52pojie签到任务:", err.message)).finally(() => {
-        console.log('当前任务执行完毕！')
+      scheduler.execTask(command, account.tasks).catch(err => console.error("52pojie签到任务:", err.message)).finally(() => {
+        console.info('当前任务执行完毕！')
       })
     } else {
-      console.log('暂无可执行任务！')
+      console.info('暂无可执行任务！')
     }
   }
-}  
+}

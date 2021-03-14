@@ -4,10 +4,7 @@ const fs = require('fs-extra')
 
 module.exports = {
     async delCookiesFile(key) {
-        let dir = path.join(os.homedir(), '.AutoSignMachine')
-        if ('TENCENTCLOUD_RUNENV' in process.env && process.env.TENCENTCLOUD_RUNENV === 'SCF') {
-            dir = path.join('/tmp', '.AutoSignMachine')
-        }
+        let dir = process.env.asm_save_data_dir
         if (!fs.existsSync(dir)) {
             fs.mkdirpSync(dir)
         }
@@ -17,10 +14,7 @@ module.exports = {
         }
     },
     getCookies: (key) => {
-        let dir = path.join(os.homedir(), '.AutoSignMachine')
-        if ('TENCENTCLOUD_RUNENV' in process.env && process.env.TENCENTCLOUD_RUNENV === 'SCF') {
-            dir = path.join('/tmp', '.AutoSignMachine')
-        }
+        let dir = process.env.asm_save_data_dir
         if (!fs.existsSync(dir)) {
             fs.mkdirpSync(dir)
         }
@@ -32,10 +26,7 @@ module.exports = {
         return ''
     },
     saveCookies: (key, cookies, cookiesJar) => {
-        let dir = path.join(os.homedir(), '.AutoSignMachine')
-        if ('TENCENTCLOUD_RUNENV' in process.env && process.env.TENCENTCLOUD_RUNENV === 'SCF') {
-            dir = path.join('/tmp', '.AutoSignMachine')
-        }
+        let dir = process.env.asm_save_data_dir
         if (!fs.existsSync(dir)) {
             fs.mkdirpSync(dir)
         }
@@ -63,24 +54,50 @@ module.exports = {
         fs.writeFileSync(cookieFile, cc.map(c => c.key + '=' + c.value).join('; ')
         )
     },
-    buildUnicomUserAgent: (options, tplname) => {
-        var tpl = {
-            'p': 'Mozilla/5.0 (Linux; Android {android_version}; {deviceModel} Build/{buildSn}; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/75.0.3770.143 Mobile Safari/537.36; unicom{version:{unicom_version},desmobile:{desmobile}};devicetype{deviceBrand:{deviceBrand},deviceModel:{deviceModel}};{yw_code:}'
-        }
-        var rdm = {
-            android_version: '7.1.2',
-            unicom_version: 'android@8.0100',
-            deviceBrand: 'samsung',
-            deviceModel: 'SM-G977N',
-            buildSn: 'LMY48Z',
-            desmobile: options.user
-        }
-        var fmt = (str, params) => {
-            for (let key in params) {
-                str = str.replace(new RegExp("\\{" + key + "\\}", "g"), params[key]);
+    buildArgs: (argv) => {
+        var accounts = []
+        var arg_group = {}
+        for (let arg_k in argv) {
+            let arg = argv[arg_k]
+            if (arg_k.indexOf('-') !== -1) {
+                let arg_k_split = arg_k.split('-')
+                let t = arg_k_split.pop()
+                let isN = (typeof t === 'number' || /^\d+$/.test(t))
+                if (!(t in arg_group) && isN) {
+                    arg_group[t] = {}
+                }
+                if (isN) {
+                    arg_group[t][arg_k_split.join('-')] = arg
+                } else {
+                    arg_group['0'][arg_k] = arg
+                }
+            } else {
+                if (!('0' in arg_group)) {
+                    arg_group['0'] = {}
+                }
+                arg_group['0'][arg_k] = arg
             }
-            return str
         }
-        return fmt(tpl[tplname], Object.assign(rdm, options))
+        if ('accountSn' in argv && argv.accountSn) {
+            let accountSns = (argv.accountSn + '').split(',')
+            for (let sn of accountSns) {
+                if (('user-' + sn) in argv) {
+                    let account = {
+                        ...((sn in arg_group) ? arg_group[sn] : {}),
+                        tasks: argv['tasks-' + sn] || argv['tasks'] || ''
+                    }
+                    if (('tryrun-' + sn) in argv) {
+                        account['tryrun'] = true
+                    }
+                    accounts.push(account)
+                }
+            }
+        } else {
+            accounts.push({
+                ...arg_group['0'],
+                tasks: argv['tasks'] || ''
+            })
+        }
+        return accounts
     }
 }
