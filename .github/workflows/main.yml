@@ -56,7 +56,7 @@ jobs:
       with:
         path: |
           /home/runner/.AutoSignMachine
-        key: ${{ runner.os }}-task-${{ steps.date.outputs.date }}
+        #key: ${{ runner.os }}-task-${{ steps.date.outputs.date }}
         restore-keys: |
           ${{ runner.os }}-task-${{ steps.cdate.outputs.date }}
           ${{ runner.os }}-
